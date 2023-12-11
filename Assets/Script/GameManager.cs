@@ -25,6 +25,21 @@ public class GameManager : MonoBehaviour
     [SerializeField, Header("ボールの画像データ")]
     private Sprite[] ballSprites;
 
+    // 最初にドラッグしたボールの情報
+    private Ball firstSelectBall;
+
+    // 最後にドラッグしたボールの情報
+    private Ball lastSelectBall;
+
+    // 最初にドラッグしたボールの種類
+    private BallType? currentBallType;
+
+    [SerializeField, Header("削除対象となるボールを登録するリスト")]
+    private List<Ball> eraseBallList = new List<Ball>();
+
+    [SerializeField, Header("つながっているボールの数")]
+    private int linkCount = 0;
+
     IEnumerator Start()   // 戻り値を void から IEnumerator型に変更してコルーチンメソッドにする
     {
         // ボールの画像を読み込む。この処理が終了するまで、次の処理へは行かないようにする
@@ -84,5 +99,82 @@ public class GameManager : MonoBehaviour
             // 0.03秒待って次のボールを生成
             yield return new WaitForSeconds(0.03f);
         }
+    }
+
+    private void Update()
+    {
+        // 干支をつなげる処理
+        if (Input.GetMouseButtonDown(0) && firstSelectBall == null)
+        {
+            // 干支を最初にドラッグした際の処理
+            OnStartDrag();
+        }
+    }
+
+    /// <summary>
+    /// ボールを最初にドラッグした際の処理
+    /// </summary>
+    private void OnStartDrag()
+    {
+        // 画面をタップした際の位置情報を、CameraクラスのScreenToWorldPointメソッドを利用してCanvas上の座標に変換
+        RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
+
+        // 干支が繋がっている数を初期化
+        linkCount = 0;
+
+        // 変換した座標のコライダーを持つゲームオブジェクトがあるか確認
+        if (hit.collider != null)
+        {
+            // ゲームオブジェクトがあった場合、そのゲームオブジェクトがBallクラスを持っているかどうか確認
+            if (hit.collider.gameObject.TryGetComponent(out Ball dragBall))
+            {
+                // Ballクラスを持っていた場合には以下の処理を行う
+
+                // 最初にドラッグしたボールの情報を変数に代入
+                firstSelectBall = dragBall;
+
+                // 最後にドラッグしたボールの情報を変数に代入(最初のドラッグなので、最後のドラッグも同じボール)
+                lastSelectBall = dragBall;
+
+                // 最初にドラッグしているボールの種類を代入 = 後程、この情報を使って繋がるボールかどうかを判別する
+                currentBallType = dragBall.ballType;
+
+                // ボールの状態が「選択中」であると更新
+                dragBall.isSelected = true;
+
+                // ボールに何番目に選択されているのか、通し番号を登録
+                dragBall.num = linkCount;
+
+                // 削除する対象のボールを登録するリストを初期化
+                eraseBallList = new List<Ball>();
+
+                // ドラッグ中の干支を削除の対象としてリストに登録
+                AddEraseBallList(dragBall);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 選択された干支を削除リストに追加
+    /// </summary>
+    /// <param name="dragBall"></param>
+    private void AddEraseBallList(Ball dragBall)
+    {
+        // 削除リストにドラッグ中のボールを追加
+        eraseBallList.Add(dragBall);
+
+        // ドラッグ中のボールのアルファ値を0.5fにする(半透明にすることで、選択中であることをユーザーに伝える)
+        ChangeBallAlpha(dragBall, 0.5f);
+    }
+
+    /// <summary>
+    /// ボールのアルファ値を変更
+    /// </summary>
+    /// <param name="dragBall"></param>
+    /// <param name="alphaValue"></param>
+    private void ChangeBallAlpha(Ball dragBall, float alphaValue)
+    {
+        // 現在ドラッグしているボールのアルファ値を変更
+        dragBall.imgBall.color = new Color(dragBall.imgBall.color.r, dragBall.imgBall.color.g, dragBall.imgBall.color.b, alphaValue);
     }
 }
