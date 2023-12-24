@@ -25,6 +25,9 @@ public class GameManager : MonoBehaviour
     [SerializeField, Header("ボールの画像データ")]
     private Sprite[] ballSprites;
 
+    [Header("スワイプで繋がる干支の範囲")]
+    public float ballDistans = 1.0f;
+
     // 最初にドラッグしたボールの情報
     private Ball firstSelectBall;
 
@@ -103,12 +106,18 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        // 干支をつなげる処理
+        // ボールをつなげる処理
         if (Input.GetMouseButtonDown(0) && firstSelectBall == null)
         {
-            // 干支を最初にドラッグした際の処理
+            // ボールを最初にドラッグした際の処理
             OnStartDrag();
         }
+        else if (firstSelectBall != null)
+        {
+            // ボールのドラッグ（スワイプ）中の処理
+            OnDragging();
+        }
+        
     }
 
     /// <summary>
@@ -119,7 +128,7 @@ public class GameManager : MonoBehaviour
         // 画面をタップした際の位置情報を、CameraクラスのScreenToWorldPointメソッドを利用してCanvas上の座標に変換
         RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
 
-        // 干支が繋がっている数を初期化
+        // ボールが繋がっている数を初期化
         linkCount = 0;
 
         // 変換した座標のコライダーを持つゲームオブジェクトがあるか確認
@@ -155,7 +164,77 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 選択された干支を削除リストに追加
+    /// ボールのドラッグ（スワイプ）中の処理
+    /// </summary>
+    private void OnDragging()
+    {
+        // OnStartDragメソッドと同じ処理で、指の位置をワールド座標に変換しRayを発射し、その位置にあるコライダーを持つオブジェクトを取得してhit変数へ代入
+        RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
+
+        // Rayの戻り値があり(hit変数がnullではない)、hit変数のゲームオブジェクトballクラスを持っていたら
+        if (hit.collider != null && hit.collider.gameObject.TryGetComponent(out Ball dragball))
+        {
+            // 現在選択中のボールの種類がnullなら処理は行わない
+            if (currentBallType == null)
+            {
+                return;
+            }
+
+            // dragBall変数のボールの種類が最初に選択したボールの種類と同じであり、最後にタップしているボールと現在のボールが違うオブジェクトであり、かつ、現在のボールがすでに「選択中」でなければ
+            if (dragball.ballType == currentBallType && lastSelectBall != dragball && !dragball.isSelected)
+            {
+                // 現在タップしているボールの位置情報と最後にタップした干支の位置情報と比べて、差分の値（ボール同士の距離）を取る
+                float distance = Vector2.Distance(dragball.transform.position, lastSelectBall.transform.position);
+
+                // ボール同士の距離が設定値よりも小さければ(２つのボールが離れていなければ)、ボールをつなげる
+                if (distance < ballDistans)
+                {
+                    // 現在のボールを選択中にする
+                    dragball.isSelected = true;
+
+                    // 最後に選択しているボールを現在のボールに更新
+                    lastSelectBall = dragball;
+
+                    //ボールの繋がった数のカウントを１つ増やす
+                    linkCount++;
+
+                    // ボールに通し番号を設定
+                    dragball.num = linkCount;
+
+                    // 削除リストに現在のボールを追加
+                    AddEraseBallList(dragball);
+                }
+            }
+
+            // 現在のボールの種類を確認(現在のボール(dragBallの情報であれば、他の情報でも良い。ちゃんと選択されているかの確認用))
+            Debug.Log(dragball.ballType);
+
+            // 削除リストに２つ以上のボールが追加されている場合
+            if (eraseBallList.Count > 1)
+            {
+                // 現在の干支の通し番号を確認
+                Debug.Log(dragball.num);
+
+                // 条件に合致する場合、削除リストからボールを除外する(ドラッグしたまま１つ前のボールに戻る場合、現在のボールを削除リストから除外する)
+                if (eraseBallList[linkCount - 1] != lastSelectBall && eraseBallList[linkCount - 1].num == dragball.num && dragball.isSelected)
+                {
+                    // 選択中のボールを取り除く
+                    RemoveEraseBallList(lastSelectBall);
+
+                    lastSelectBall.GetComponent<Ball>().isSelected = false;
+
+                    // 最後のボールの情報を、前のボールに戻す
+                    lastSelectBall = dragball;
+
+                    // 繋がっているボールの数を減らす
+                    linkCount--;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 選択されたボールを削除リストに追加
     /// </summary>
     /// <param name="dragBall"></param>
     private void AddEraseBallList(Ball dragBall)
@@ -165,6 +244,26 @@ public class GameManager : MonoBehaviour
 
         // ドラッグ中のボールのアルファ値を0.5fにする(半透明にすることで、選択中であることをユーザーに伝える)
         ChangeBallAlpha(dragBall, 0.5f);
+    }
+
+    /// <summary>
+    /// 前のボールに戻った際に削除リストから削除
+    /// </summary>
+    /// <param name="dragBall"></param>
+    private void RemoveEraseBallList(Ball dragball)
+    {
+        // 削除リストから削除
+        eraseBallList.Remove(dragball);
+
+        // 干支の透明度を元の値(1.0f)に戻す
+        ChangeBallAlpha(dragball, 1.0f);
+
+        // ボールの「選択中」の情報がtrueの場合
+        if (dragball.isSelected)
+        {
+            // falseにして選択中ではない状態に戻す
+            dragball.isSelected = false;
+        }
     }
 
     /// <summary>
