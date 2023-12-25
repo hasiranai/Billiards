@@ -112,6 +112,11 @@ public class GameManager : MonoBehaviour
             // ボールを最初にドラッグした際の処理
             OnStartDrag();
         }
+        else if (Input.GetMouseButtonUp(0)) // (順番が重要)
+        {
+            // 干支のドラッグをやめた（指を離した）際の処理
+            OnEndDrag();
+        }
         else if (firstSelectBall != null)
         {
             // ボールのドラッグ（スワイプ）中の処理
@@ -231,6 +236,51 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// 干支のドラッグをやめた（指を画面から離した）際の処理
+    /// </summary>
+    private void OnEndDrag()
+    {
+        // 繋がっているボールが３つ以上あったら削除する処理に移る
+        if (eraseBallList.Count >= 3)
+        {
+            // 選択されているボールを消す
+            for (int i = 0; i < eraseBallList.Count; i++)
+            {
+                // ボールリストから取り除く
+                ballList.Remove(eraseBallList[i]);
+
+                // ボールを削除
+                Destroy(eraseBallList[i].gameObject);
+            }
+
+            // 消したボールの数だけ新しいボールをランダムに生成
+            StartCoroutine(CreateBalls(eraseBallList.Count));
+
+            // 削除リストをクリアする
+            eraseBallList.Clear();
+        }
+        else
+        {
+            // 繋がっているボールが２つ以下なら、削除はしない
+
+            // 削除リストから、削除候補であったボールを取り除く
+            for (int i = 0; i < eraseBallList.Count; i++)
+            {
+                // 各ボールの選択中の状態を解除する
+                eraseBallList[i].isSelected = false;
+
+                // ボールの色の透明度を元の透明度に戻す
+                ChangeBallAlpha(eraseBallList[i], 1.0f);
+            }
+        }
+
+        // 次回のボールを消す処理のために、各変数の値をnullにする
+        firstSelectBall = null;
+        lastSelectBall = null;
+        currentBallType = null;
     }
 
     /// <summary>
