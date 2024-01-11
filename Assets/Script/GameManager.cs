@@ -28,6 +28,9 @@ public class GameManager : MonoBehaviour
     [Header("スワイプで繋がる干支の範囲")]
     public float ballDistans = 1.0f;
 
+    [SerializeField]
+    private UIManager uiManager;
+
     // 最初にドラッグしたボールの情報
     private Ball firstSelectBall;
 
@@ -256,6 +259,9 @@ public class GameManager : MonoBehaviour
                 Destroy(eraseBallList[i].gameObject);
             }
 
+            // スコアと消したボールの数の加算
+            AddScores(currentBallType, (eraseBallList.Count));
+
             // 消したボールの数だけ新しいボールをランダムに生成
             StartCoroutine(CreateBalls(eraseBallList.Count));
 
@@ -325,5 +331,22 @@ public class GameManager : MonoBehaviour
     {
         // 現在ドラッグしているボールのアルファ値を変更
         dragBall.imgBall.color = new Color(dragBall.imgBall.color.r, dragBall.imgBall.color.g, dragBall.imgBall.color.b, alphaValue);
+    }
+
+    /// <summary>
+    /// スコアと消した干支の数を追加
+    /// </summary>
+    /// <param name="etoType">消したボールの種類</param>
+    /// <param name="count">消したボールの数</param>
+    private void AddScores(BallType? ballType, int count)
+    {
+        // スコアを加算(BallPoint * 消した数)
+        GameData.instance.score += GameData.instance.ballPoint * count;
+
+        // 消したボールの数を加算
+        GameData.instance.eraseBallCount += count;
+
+        // スコア加算と画面の更新処理
+        uiManager.UpdateDisplayScore();
     }
 }

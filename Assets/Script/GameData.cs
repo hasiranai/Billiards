@@ -12,6 +12,15 @@ public class GameData : MonoBehaviour
     [Header("ゲーム開始時に生成する球の数")]
     public int createBallCount = 50;
 
+    [Header("現在のスコア")]
+    public int score = 0;
+
+    [Header("ボールを消した際に加算されるスコア")]
+    public int ballPoint = 100;
+
+    [Header("消したボールの数")]
+    public int eraseBallCount = 0;
+
     private void Awake()
     {
         if (instance == null)
@@ -23,5 +32,18 @@ public class GameData : MonoBehaviour
         {
             Destroy(gameObject);
         }
+
+        // ゲームの初期化
+        InitGame();
+    }
+
+    /// <summary>
+    /// ゲーム初期化
+    /// </summary>
+    private void InitGame()
+    {
+        score = 0;
+        eraseBallCount = 0;
+        Debug.Log("Init Game");
     }
 }
