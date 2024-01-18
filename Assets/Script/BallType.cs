@@ -18,7 +18,5 @@ public enum BallType    // Monobehaiviourは削除
     十三 = 12,
     十四 = 13,
     十五 = 14,
-    白 = 15,
-    白赤 = 16,
-    Count = 17,
+    Count = 15,
 }

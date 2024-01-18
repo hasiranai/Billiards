@@ -46,10 +46,15 @@ public class GameManager : MonoBehaviour
     [SerializeField, Header("つながっているボールの数")]
     private int linkCount = 0;
 
+    private float timer;       // 残り時間計測用
+
     IEnumerator Start()   // 戻り値を void から IEnumerator型に変更してコルーチンメソッドにする
     {
         // ボールの画像を読み込む。この処理が終了するまで、次の処理へは行かないようにする
         yield return StartCoroutine(LoadBallSprites());
+
+        // 残り時間の表示
+        uiManager.UpdateDisprayGameTime(GameData.instance.gameTime);
 
         // 引数で指定した数のボールを生成する
         StartCoroutine(CreateBalls(GameData.instance.createBallCount));
@@ -125,7 +130,32 @@ public class GameManager : MonoBehaviour
             // ボールのドラッグ（スワイプ）中の処理
             OnDragging();
         }
-        
+
+        // ゲームの残り時間のカウント処理
+        timer += Time.deltaTime;
+
+        // timerが 1 以上になったら
+        if (timer >= 1)
+        {
+            // リセットして再度加算できるように
+            timer = 0;
+
+            // 残り時間をマイナス
+            GameData.instance.gameTime--;
+
+            // 残り時間がマイナスになったら
+            if (GameData.instance.gameTime <= 0)
+            {
+                //0で止める
+                GameData.instance.gameTime = 0;
+
+                // TODO ゲーム終了を追加する
+                Debug.Log("ゲーム終了");
+            }
+
+            // 残り時間の表示更新
+            uiManager.UpdateDisprayGameTime(GameData.instance.gameTime);
+        }
     }
 
     /// <summary>
